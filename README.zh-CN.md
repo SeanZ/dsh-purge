@@ -1,3 +1,7 @@
+> 本分支为 `compat/dsh-015rc2-tavern`，版本 `1.1.15-seanz.1`，面向 DSH `0.1.5-rc.2` 与 Tavern `2.5.0`。唯一安装源为 SeanZ/dsh-purge 的固定兼容发行标签。上游作者归因与许可证仍保留在 Git 历史和 LICENSE 中。
+>
+> 兼容部署默认启用 PE，关闭启动自动应用、自动更新、手动宿主修改与 purge 回退，保留 Mnemon。部署时预先准备 `prompt-inject.md` 或规则集；运行时不会自动补写默认提示词。下文历史功能说明中的「应用」「重启」「更新」需要显式启用 `allowHostMutation`，通常应使用已验收的完整部署制品。
+
 <p align="center">
   <img src="docs/banner.svg" alt="dsh-purge" width="720">
 </p>
@@ -11,8 +15,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/YuJunZhiXue/dsh-purge/stargazers"><img src="https://img.shields.io/github/stars/YuJunZhiXue/dsh-purge?logo=github&label=Stars" alt="GitHub stars"></a>
-  <a href="https://github.com/YuJunZhiXue/dsh-purge/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-MIT-65a30d?style=flat" alt="MIT license"></a>
+  <a href="https://github.com/SeanZ/dsh-purge/stargazers"><img src="https://img.shields.io/github/stars/SeanZ/dsh-purge?logo=github&label=Stars" alt="GitHub stars"></a>
+  <a href="https://github.com/SeanZ/dsh-purge/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-MIT-65a30d?style=flat" alt="MIT license"></a>
   <a href="https://awesome-dsh-plugin.com"><img src="https://awesome-dsh-plugin.com/badge.svg" alt="awesome · DSH plugin"></a>
   <a href="https://deepseek.stream/plugins/dsh-purge"><img src="https://img.shields.io/badge/Hub-dsh--purge-1a73e8" alt="DeepSeek Harness Hub"></a>
   <a href="https://www.deepseek.com/harness/"><img src="https://img.shields.io/badge/dsh-0.1.5--rc.2-blue" alt="DSH"></a>
@@ -143,7 +147,7 @@ Web 的「应用 / 重启 / 卸载」只动 Web。桌面端的只动桌面应用
 官方 `dsh` 需要在 PATH 上。没有就先装官方 CLI，或改走手动安装。
 
 ```sh
-dsh plugin --profile web add https://github.com/YuJunZhiXue/dsh-purge/archive/refs/heads/master.tar.gz
+dsh plugin --profile web add https://github.com/SeanZ/dsh-purge/archive/refs/tags/v1.1.15-seanz.1.tar.gz
 ```
 
 当前目录已经是本仓库时：
@@ -161,7 +165,7 @@ dsh plugin --profile web add .
 打开 [DSH Desktop](https://github.com/anywhere-labs/dsh-desktop)，在 **自带终端** 里执行。这里的 `dsh` 是桌面包装脚本，默认 profile 就是 `desktop`。
 
 ```sh
-dsh plugin add https://github.com/YuJunZhiXue/dsh-purge/archive/refs/heads/master.tar.gz
+dsh plugin add https://github.com/SeanZ/dsh-purge/archive/refs/tags/v1.1.15-seanz.1.tar.gz
 ```
 
 不要用 PATH 上的官方 `dsh plugin --profile desktop`，这条会被拒绝。不要用 `dsh://`，那是官方 EXE 的协议。
@@ -176,7 +180,7 @@ dsh plugin add https://github.com/YuJunZhiXue/dsh-purge/archive/refs/heads/maste
 按正在运行的进程，或下面三个默认位置找 `DSH Desktop.exe`。不要全盘搜索。
 
 ```powershell
-$zip = "https://github.com/YuJunZhiXue/dsh-purge/archive/refs/heads/master.tar.gz"
+$zip = "https://github.com/SeanZ/dsh-purge/archive/refs/tags/v1.1.15-seanz.1.tar.gz"
 $exe = (Get-Process -Name "DSH Desktop" -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty Path)
 if (-not $exe) {
   $exe = @(
@@ -204,19 +208,19 @@ $env:DSH_DESKTOP_DEFAULT_PROFILE = "desktop"
 已经安装 **DeepSeek Harness 官方桌面客户端** 时，用下面的命令，或点按钮走 `dsh://`。社区 DSH Desktop **不认** 这个协议，请回到上一节。
 
 ```sh
-dsh plugin --profile default add https://github.com/YuJunZhiXue/dsh-purge/archive/refs/heads/master.tar.gz
+dsh plugin --profile default add https://github.com/SeanZ/dsh-purge/archive/refs/tags/v1.1.15-seanz.1.tar.gz
 ```
 
 <p align="center">
   <a href="https://deepseek.stream/plugins/dsh-purge"><strong>🌐 打开插件市场页</strong></a>
   &nbsp;·&nbsp;
-  <a href="dsh://plugin/install?id=dsh-purge&name=dsh-purge&version=1.1.15&repo=YuJunZhiXue%2Fdsh-purge&permissions=%E7%B3%BB%E7%BB%9F%E6%8F%90%E7%A4%BA%E8%AF%8D%E6%B3%A8%E5%85%A5%2C%E6%9C%AC%E6%9C%BA%E8%A1%A5%E4%B8%81%2C%E8%AE%BE%E7%BD%AE%E9%A1%B5&downloadUrl=https%3A%2F%2Fgithub.com%2FYuJunZhiXue%2Fdsh-purge%2Farchive%2Frefs%2Fheads%2Fmaster.tar.gz"><strong>🚀 唤起客户端一键安装</strong></a>
+  <a href="dsh://plugin/install?id=dsh-purge&name=dsh-purge&version=1.1.15-seanz.1&repo=SeanZ%2Fdsh-purge&permissions=%E7%B3%BB%E7%BB%9F%E6%8F%90%E7%A4%BA%E8%AF%8D%E6%B3%A8%E5%85%A5%2C%E6%9C%AC%E6%9C%BA%E8%A1%A5%E4%B8%81%2C%E8%AE%BE%E7%BD%AE%E9%A1%B5&downloadUrl=https%3A%2F%2Fgithub.com%2FSeanZ%2Fdsh-purge%2Farchive%2Frefs%2Ftags%2Fv1.1.15-seanz.1.tar.gz"><strong>🚀 唤起客户端一键安装</strong></a>
 </p>
 
 🔗 **原生协议链接：**
 
 ```
-dsh://plugin/install?id=dsh-purge&name=dsh-purge&version=1.1.15&repo=YuJunZhiXue%2Fdsh-purge&permissions=%E7%B3%BB%E7%BB%9F%E6%8F%90%E7%A4%BA%E8%AF%8D%E6%B3%A8%E5%85%A5%2C%E6%9C%AC%E6%9C%BA%E8%A1%A5%E4%B8%81%2C%E8%AE%BE%E7%BD%AE%E9%A1%B5&downloadUrl=https%3A%2F%2Fgithub.com%2FYuJunZhiXue%2Fdsh-purge%2Farchive%2Frefs%2Fheads%2Fmaster.tar.gz
+dsh://plugin/install?id=dsh-purge&name=dsh-purge&version=1.1.15-seanz.1&repo=SeanZ%2Fdsh-purge&permissions=%E7%B3%BB%E7%BB%9F%E6%8F%90%E7%A4%BA%E8%AF%8D%E6%B3%A8%E5%85%A5%2C%E6%9C%AC%E6%9C%BA%E8%A1%A5%E4%B8%81%2C%E8%AE%BE%E7%BD%AE%E9%A1%B5&downloadUrl=https%3A%2F%2Fgithub.com%2FSeanZ%2Fdsh-purge%2Farchive%2Frefs%2Ftags%2Fv1.1.15-seanz.1.tar.gz
 ```
 
 <details>
@@ -232,10 +236,10 @@ export function installDshPurgeToDesktop() {
   const params = new URLSearchParams({
     id: 'dsh-purge',
     name: 'dsh-purge',
-    version: '1.1.15',
-    repo: 'YuJunZhiXue/dsh-purge',
+    version: '1.1.15-seanz.1',
+    repo: 'SeanZ/dsh-purge',
     permissions: '系统提示词注入, 本机补丁, 设置页',
-    downloadUrl: 'https://github.com/YuJunZhiXue/dsh-purge/archive/refs/heads/master.tar.gz',
+    downloadUrl: 'https://github.com/SeanZ/dsh-purge/archive/refs/tags/v1.1.15-seanz.1.tar.gz',
   });
 
   const deepLink = `dsh://plugin/install?${params.toString()}`;
@@ -251,7 +255,7 @@ export function installDshPurgeToDesktop() {
 **HTML 静态链接方式：**
 
 ```html
-<a href="dsh://plugin/install?id=dsh-purge&name=dsh-purge&version=1.1.15&repo=YuJunZhiXue%2Fdsh-purge&permissions=%E7%B3%BB%E7%BB%9F%E6%8F%90%E7%A4%BA%E8%AF%8D%E6%B3%A8%E5%85%A5%2C%E6%9C%AC%E6%9C%BA%E8%A1%A5%E4%B8%81%2C%E8%AE%BE%E7%BD%AE%E9%A1%B5&downloadUrl=https%3A%2F%2Fgithub.com%2FYuJunZhiXue%2Fdsh-purge%2Farchive%2Frefs%2Fheads%2Fmaster.tar.gz">
+<a href="dsh://plugin/install?id=dsh-purge&name=dsh-purge&version=1.1.15-seanz.1&repo=SeanZ%2Fdsh-purge&permissions=%E7%B3%BB%E7%BB%9F%E6%8F%90%E7%A4%BA%E8%AF%8D%E6%B3%A8%E5%85%A5%2C%E6%9C%AC%E6%9C%BA%E8%A1%A5%E4%B8%81%2C%E8%AE%BE%E7%BD%AE%E9%A1%B5&downloadUrl=https%3A%2F%2Fgithub.com%2FSeanZ%2Fdsh-purge%2Farchive%2Frefs%2Ftags%2Fv1.1.15-seanz.1.tar.gz">
   🚀 唤起客户端一键安装
 </a>
 ```
@@ -263,9 +267,9 @@ export function installDshPurgeToDesktop() {
 | id | `dsh-purge` | 插件唯一标识符 |
 | name | `dsh-purge` | 插件展示名称 |
 | version | `1.1.15` | 语义化版本号 |
-| repo | `YuJunZhiXue/dsh-purge` | GitHub 仓库 |
+| repo | `SeanZ/dsh-purge` | GitHub 仓库 |
 | permissions | `系统提示词注入, 本机补丁, 设置页` | 申请权限 |
-| downloadUrl | `https://github.com/YuJunZhiXue/dsh-purge/archive/refs/heads/master.tar.gz` | GitHub 源码包地址 |
+| downloadUrl | `https://github.com/SeanZ/dsh-purge/archive/refs/tags/v1.1.15-seanz.1.tar.gz` | GitHub 源码包地址 |
 
 </details>
 
@@ -293,7 +297,7 @@ export function installDshPurgeToDesktop() {
 `dsh` 不在 PATH 就告诉用户后停止。
 
 ```sh
-dsh plugin --profile web add https://github.com/YuJunZhiXue/dsh-purge/archive/refs/heads/master.tar.gz
+dsh plugin --profile web add https://github.com/SeanZ/dsh-purge/archive/refs/tags/v1.1.15-seanz.1.tar.gz
 ```
 
 当前目录已是本仓库时改用 `dsh plugin --profile web add .`。
@@ -305,13 +309,13 @@ dsh plugin --profile web add https://github.com/YuJunZhiXue/dsh-purge/archive/re
 默认：已在桌面端自带终端里时直接跑：
 
 ```sh
-dsh plugin add https://github.com/YuJunZhiXue/dsh-purge/archive/refs/heads/master.tar.gz
+dsh plugin add https://github.com/SeanZ/dsh-purge/archive/refs/tags/v1.1.15-seanz.1.tar.gz
 ```
 
 从系统终端安装时：用正在运行的 `DSH Desktop` 进程 Path，或默认位置 `%LOCALAPPDATA%\Programs\DSH Desktop\DSH Desktop.exe`、`%ProgramFiles%\DSH Desktop\DSH Desktop.exe`。不要全盘扫描。然后：
 
 ```powershell
-$zip = "https://github.com/YuJunZhiXue/dsh-purge/archive/refs/heads/master.tar.gz"
+$zip = "https://github.com/SeanZ/dsh-purge/archive/refs/tags/v1.1.15-seanz.1.tar.gz"
 $exe = (Get-Process -Name "DSH Desktop" -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty Path)
 if (-not $exe) {
   $exe = @(
@@ -333,7 +337,7 @@ $env:DSH_DESKTOP_DEFAULT_PROFILE = "desktop"
 **官方 Harness 桌面 EXE**
 
 ```sh
-dsh plugin --profile default add https://github.com/YuJunZhiXue/dsh-purge/archive/refs/heads/master.tar.gz
+dsh plugin --profile default add https://github.com/SeanZ/dsh-purge/archive/refs/tags/v1.1.15-seanz.1.tar.gz
 ```
 
 命令结束后，提醒：完全退出并重启刚装的那个宿主，再在该宿主设置页点「应用」。Web 和桌面端不要交叉点应用。然后停止。
@@ -421,19 +425,19 @@ $DSH_HOME/
 
 ```sh
 mkdir -p "$DSH_HOME/plugins"
-git clone https://github.com/YuJunZhiXue/dsh-purge.git "$DSH_HOME/plugins/dsh-purge"
+git clone --branch v1.1.15-seanz.1 https://github.com/SeanZ/dsh-purge.git "$DSH_HOME/plugins/dsh-purge"
 ```
 
-没有 git 时，下载 [master.tar.gz](https://github.com/YuJunZhiXue/dsh-purge/archive/refs/heads/master.tar.gz)，解压后把里面的 `dsh-purge-master` **改名为** `dsh-purge`，再整夹放到 `plugins` 下。Windows PowerShell 示例（先把 `$home` 换成上一步找到的路径）：
+没有 git 时，下载 [v1.1.15-seanz.1.tar.gz](https://github.com/SeanZ/dsh-purge/archive/refs/tags/v1.1.15-seanz.1.tar.gz)，解压后把里面的 `dsh-purge-1.1.15-seanz.1` **改名为** `dsh-purge`，再整夹放到 `plugins` 下。Windows PowerShell 示例（先把 `$home` 换成上一步找到的路径）：
 
 ```powershell
 $home = "D:\DeepSeek Harness\.dsh"
 $plugins = Join-Path $home "plugins"
 New-Item -ItemType Directory -Force -Path $plugins | Out-Null
-$tmp = Join-Path $env:TEMP "dsh-purge-master.tar.gz"
-Invoke-WebRequest -Uri "https://github.com/YuJunZhiXue/dsh-purge/archive/refs/heads/master.tar.gz" -OutFile $tmp
+$tmp = Join-Path $env:TEMP "dsh-purge-1.1.15-seanz.1.tar.gz"
+Invoke-WebRequest -Uri "https://github.com/SeanZ/dsh-purge/archive/refs/tags/v1.1.15-seanz.1.tar.gz" -OutFile $tmp
 tar -xzf $tmp -C $plugins
-$src = Join-Path $plugins "dsh-purge-master"
+$src = Join-Path $plugins "dsh-purge-1.1.15-seanz.1"
 $dst = Join-Path $plugins "dsh-purge"
 if (Test-Path $dst) { Remove-Item -Recurse -Force $dst }
 Rename-Item $src "dsh-purge"
@@ -750,7 +754,7 @@ flowchart LR
 
 ## 更新
 
-每一版改了什么、安装包在 [Releases](https://github.com/YuJunZhiXue/dsh-purge/releases)。发新版时把 `package.json` 的版本号改掉，中英文说明写进 `release-notes.md`，推到 `master` 就会自动打包。同一版本再推送不会重复发包。
+每一版改了什么、安装包在 [Releases](https://github.com/SeanZ/dsh-purge/releases)。发新版时把 `package.json` 的版本号改掉，中英文说明写进 `release-notes.md`，经集成验收后手动发布兼容标签。同一版本再推送不会重复发包。
 
 ## 说明
 

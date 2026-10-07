@@ -1,0 +1,10 @@
+{
+  "overrides": [
+    {
+      "files": ["client-src/**/*.js", "scripts/build-client.mjs"],
+      "options": {
+        "printWidth": 120
+      }
+    }
+  ]
+}
