@@ -112,4 +112,17 @@ export function apply(ctx) {
       SettingsRoot,
     ),
   );
+  // 独立设置入口不依赖会话列表；Tavern 隐藏侧栏后仍能进入同一面板。
+  ctx.slots.inject("settings.section", () =>
+    ctx.slots.register(
+      {
+        name: "settings.section",
+        id: "dsh-purge",
+        order: 90,
+        label: "Purge",
+        inject: () => ({ t }),
+      },
+      SettingsRoot,
+    ),
+  );
 }

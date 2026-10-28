@@ -9775,6 +9775,24 @@ function AuthGate(props) {
   );
 }
 
+// src/components/maintenance-target.js
+function MaintenanceTarget({ status }) {
+  const target = status?.maintenance_target;
+  if (!target) return null;
+  return h(
+    "div",
+    {
+      className: "dshpp-hint",
+      role: "status",
+      style: { margin: "0 20px 10px", overflowWrap: "anywhere" }
+    },
+    h("strong", null, "\u5E94\u7528\u8303\u56F4\uFF1A\u4EC5\u5F53\u524D Web \u5B9E\u4F8B"),
+    h("div", null, `Profile\uFF1A${target.profile?.name || "\u672A\u6307\u5B9A"}`),
+    h("div", null, `\u5BBF\u4E3B\u76EE\u5F55\uFF1A${target.aiBase}`),
+    h("div", null, `\u6570\u636E\u76EE\u5F55\uFF1A${target.homes?.[0] || "\u672A\u6307\u5B9A"}`)
+  );
+}
+
 // src/shared/runtime-error.js
 function runtimeRepairDetails(report) {
   if (!report || report.ok !== false) return [];
@@ -11967,7 +11985,7 @@ function PurgifySection({ page = "status", onStatus } = {}) {
 }
 
 // src/state/session-context.js
-var import_react11 = require("react");
+var import_react12 = require("react");
 var host = null;
 var listeners = /* @__PURE__ */ new Set();
 function notify() {
@@ -12026,7 +12044,7 @@ function clientCurrentCwd() {
   }
 }
 function useCurrentCwd() {
-  return (0, import_react11.useSyncExternalStore)(subscribe, clientCurrentCwd, () => "");
+  return (0, import_react12.useSyncExternalStore)(subscribe, clientCurrentCwd, () => "");
 }
 
 // src/components/rules.js
@@ -12931,6 +12949,7 @@ function SettingsRoot(props = {}) {
       )
     ),
     h(CompatibilityNote, { status: backendStatus }),
+    h(MaintenanceTarget, { status: backendStatus }),
     h(
       "nav",
       { className: "dshpp-native-nav", "aria-label": "Purge \u8BBE\u7F6E\u5206\u7C7B" },
@@ -14553,6 +14572,19 @@ function apply(ctx) {
       {
         name: "plugins.bundle.config",
         key: true ? "dsh-purge-community" : "dsh-purge-panel",
+        inject: () => ({ t })
+      },
+      SettingsRoot
+    )
+  );
+  ctx.slots.inject(
+    "settings.section",
+    () => ctx.slots.register(
+      {
+        name: "settings.section",
+        id: "dsh-purge",
+        order: 90,
+        label: "Purge",
         inject: () => ({ t })
       },
       SettingsRoot
