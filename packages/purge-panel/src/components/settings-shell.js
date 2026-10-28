@@ -1,3 +1,4 @@
+import { MaintenanceTarget } from "./maintenance-target.js";
 import { CommunityMaintenance } from "./maintenance.js";
 // UI derived from YuJunZhiXue/dsh-purge 1.1.71 (MIT). See LICENSE.
 import { h, useState, useEffect } from "../shared/react.js";
@@ -112,6 +113,7 @@ export function SettingsRoot(props = {}) {
       ),
     ),
     h(CompatibilityNote, { status: backendStatus }),
+    h(MaintenanceTarget, { status: backendStatus }),
     h(
       "nav",
       { className: "dshpp-native-nav", "aria-label": "Purge 设置分类" },

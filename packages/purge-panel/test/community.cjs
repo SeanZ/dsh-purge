@@ -207,6 +207,21 @@ assert.equal(railSeat.spec.id, "dsh-purge");
 const pageSeat = seats.find((x) => x.spec.name === "main");
 assert(pageSeat, "full page is registered on the main slot");
 assert.equal(pageSeat.spec.key, "dsh-purge");
+const settingsSeat = seats.find((x) => x.spec.name === "settings.section");
+const bundleSettingsSeat = seats.find(
+  (x) => x.spec.name === "plugins.bundle.config",
+);
+assert(
+  settingsSeat,
+  "Purge remains available from Settings without the session rail",
+);
+assert.equal(settingsSeat.spec.id, "dsh-purge");
+assert.equal(settingsSeat.spec.label, "Purge");
+assert.equal(
+  settingsSeat.body,
+  bundleSettingsSeat.body,
+  "Settings reuses the existing Purge panel",
+);
 const body = pageSeat.body;
 
 responses["/dsh-purge/community"] = {
@@ -295,6 +310,49 @@ win.confirm = () => true;
     !writes.some((x) => /apply|restart|revert/.test(x.path)),
     "maintenance never applies host patches or restarts DSH",
   );
+  await act(async () => tree.unmount());
+  const withoutRail = [];
+  plugin.apply({
+    ...ctx,
+    effect: () => () => {},
+    inject: () => {},
+    slots: {
+      inject: (name, fn) => (name === "sidebar.panellist" ? undefined : fn()),
+      register: (spec, component) => {
+        withoutRail.push({ spec, component });
+        return () => {};
+      },
+    },
+  });
+  assert(!withoutRail.some((item) => item.spec.name === "sidebar.panellist"));
+  const independentSettings = withoutRail.find(
+    (item) => item.spec.name === "settings.section",
+  );
+  assert(independentSettings, "Settings 不依赖 sessions 侧栏扩展点");
+  responses["/dsh-purge/status"].maintenance_target = {
+    scope: "current-web-instance",
+    profile: { name: "web" },
+    aiBase: "/fixture/runtime/node_modules/@deepseek-ai",
+    homes: ["/fixture/home"],
+  };
+  const writeCount = writes.length;
+  await act(async () => {
+    tree = create(
+      React.createElement(independentSettings.component, {
+        t: ctx.locale.bind(),
+      }),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 15));
+  });
+  const settingsText = JSON.stringify(tree.toJSON());
+  for (const text of [
+    "仅当前 Web 实例",
+    "Profile：web",
+    "/fixture/runtime/node_modules/@deepseek-ai",
+    "/fixture/home",
+  ])
+    assert(settingsText.includes(text));
+  assert.equal(writes.length, writeCount, "打开独立设置入口不会自动应用或保存");
   await act(async () => tree.unmount());
   for (const life of lifecycle.reverse())
     if (typeof life.dispose === "function") life.dispose();
