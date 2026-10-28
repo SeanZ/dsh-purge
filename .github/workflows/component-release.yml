@@ -1,0 +1,45 @@
+name: Build fixed Purge component
+on:
+  workflow_dispatch:
+  push:
+    branches: ["release/components-022a2-*"]
+permissions:
+  contents: read
+concurrency:
+  group: purge-component-${{ github.sha }}
+  cancel-in-progress: false
+jobs:
+  component:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: "24.22.1"
+      - name: Verify fixed plugin
+        env:
+          NODE_OPTIONS: --test-reporter=tap
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm ci --ignore-scripts --no-audit --no-fund --prefix packages/purge-panel
+          npm run test:web
+          node --test test/component-export.test.mjs
+          npm run test:ui
+          npm run check:client
+          npm run check:docs
+      - name: Export standard plugin package
+        env:
+          COMPONENT_REPOSITORY: ${{ github.repository }}
+        run: node scripts/export-component.mjs --repository "$COMPONENT_REPOSITORY" --out "$RUNNER_TEMP/component"
+      - name: Save draft Release for composition verification
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          tag="purge-component-$(node -p 'require("./package.json").version')-${GITHUB_SHA:0:12}"
+          gh release create "$tag" "$RUNNER_TEMP/component/"* --draft --prerelease --target "$GITHUB_SHA" --title "$tag" --notes "Fixed plugin snapshot. Standard npm package and SHA-256 manifest. Installation does not apply host rules. No npm publication."
