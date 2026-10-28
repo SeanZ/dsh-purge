@@ -171,3 +171,79 @@ test("#57 covers both pi-ai paths that decide the developer role", () => {
   const files = patch(57).file;
   assert.deepEqual([...files].sort(), ["pi-ai-completions", "pi-ai-responses-shared"]);
 });
+
+
+// --- 0.2.2-alpha.2 anchors (#14 / #40 / #74) ---------------------------------
+// 下面三段是从官方 alpha.2 原树里逐字节抄出来的真实片段；alpha.2 改了这三处的
+// 内部写法，旧锚点全部落空，而它们的兄弟规则仍然命中 —— 于是出现
+// 「前置检查已删、后续调用没改」这种部分应用状态（#14 直接 TypeError）。
+// 片段改了就说明宿主又变了，必须和补丁表一起更新，这正是这几条测试的意义。
+const ALPHA2_ESCALATION_REQUEST = `	const outcome = await approval.approver.request({
+		agent: approval.agent,
+		toolName: approval.toolName,
+		callId: approval.callId,
+		reason: \`escalate sandbox to \${mode}: \${justification}\`,
+		displayReason: escalationDisplayReason(mode, justification),
+		...approval.signal ? { signal: approval.signal } : {}
+	});`;
+
+const ALPHA2_SYSTEM_PROMPT_ASSEMBLE = `		const transformed = await this.ctx.waterfall(scopeTarget(this, scope), "system-prompt/assemble", assembly, context, () => Promise.resolve(assembly));
+		if (completeSection === void 0 && !runtimeContextSuppressed) return {
+			...transformed,
+			tools
+		};
+		const requiredContexts = new Set([...contextByName.values()].filter((entry) => entry.required === true).map((entry) => entry.name));
+		return {
+			...transformed,
+			tools,
+			sections: completeSection === void 0 ? transformed.sections : [completeSection],
+			contexts: runtimeContextSuppressed ? transformed.contexts.filter((entry) => requiredContexts.has(entry.name)) : transformed.contexts
+		};`;
+
+const ALPHA2_PRESTEP_ASSEMBLE = `		try {
+			const assembly = await this.loopCtx.systemPrompt.assemble({
+				...assembleContextFor(this, signal),`;
+
+test("alpha.2 #14: displayReason 变成函数调用后仍锁得住调用头/尾", () => {
+  const out = applyReplacementsToText(ALPHA2_ESCALATION_REQUEST, patch(14));
+  assert.equal(out.changed, true, "alpha.2 的 approver.request 必须命中");
+  assert.ok(out.text.includes("approval.approver !== undefined && approval.agent !== undefined ? await approval.approver.request({"));
+  assert.ok(out.text.includes('}) : "allowed-once";'));
+  // 中间正文必须原样带走：改错一个语言就会让升级请求走错分支。
+  assert.ok(out.text.includes("displayReason: escalationDisplayReason(mode, justification),"));
+  assert.equal(applyReplacementsToText(out.text, patch(14)).changed, false, "第二次应用必须是 no-op");
+});
+
+test("#14 的正文再变也不丢锚点（只锁调用头与收尾）", () => {
+  // 上游再加一种语言/换 displayReason 组织方式时，旧的两条精确锚点会落空。
+  const future = ALPHA2_ESCALATION_REQUEST.replace(
+    "displayReason: escalationDisplayReason(mode, justification),",
+    "displayReason: escalationDisplayReason(mode, justification, { locale: true }), // 9th locale",
+  );
+  const out = applyReplacementsToText(future, patch(14));
+  assert.equal(out.changed, true);
+  assert.ok(out.text.includes("9th locale"));
+  assert.ok(out.text.includes('}) : "allowed-once";'));
+});
+
+test("alpha.2 #40: complete 分支保住注入，并且绝不丢 tools", () => {
+  const out = applyReplacementsToText(ALPHA2_SYSTEM_PROMPT_ASSEMBLE, patch(40));
+  assert.equal(out.changed, true, "alpha.2 的 assemble 返回结构必须命中");
+  assert.ok(out.text.includes("const dshPurgeSections ="));
+  assert.ok(out.text.includes("[...dshPurgeRest, ...dshPurgeSections]"));
+  assert.ok(out.text.includes("requiredContexts.has(entry.name)"));
+  // tools 是 alpha.2 新增字段，落在 waterfall 之外；丢掉它模型收不到任何工具声明。
+  assert.ok(out.text.includes("return { ...transformed, tools };"), "早退分支必须带上 tools");
+  assert.ok(/\n\t\t\ttools,\n/.test(out.text), "完整分支必须带上 tools");
+  assert.equal(applyReplacementsToText(out.text, patch(40)).changed, false);
+});
+
+test("alpha.2 #74: 装配头两行之前挂上 prepare 钩子，且只挂一次", () => {
+  const out = applyReplacementsToText(ALPHA2_PRESTEP_ASSEMBLE, patch(74));
+  assert.equal(out.changed, true, "alpha.2 的 preStep 装配调用必须命中");
+  const hook = out.text.indexOf("dshPurgePrepare(this.loopCtx)");
+  const assemble = out.text.indexOf("const assembly = await this.loopCtx.systemPrompt.assemble({");
+  assert.ok(hook > 0 && assemble > hook, "钩子必须排在 assemble 之前");
+  assert.equal(out.text.split("dshPurgePrepare(this.loopCtx)").length - 1, 1);
+  assert.equal(applyReplacementsToText(out.text, patch(74)).changed, false);
+});

@@ -16,7 +16,11 @@ const GATE_FINGERPRINTS = {
   11: "f732bb54043fe3f6",
   12: "e7e94c2c5d5d6e0f",
   13: "eac61898ab7bddde",
-  14: "8a7c12ba2de85245",
+  // 2026-10-28：alpha.2 把 displayReason 从内联 {en,zh} 换成 escalationDisplayReason(mode, justification)，
+  // 旧的精确锚点整条落空，而兄弟规则 #13（删前置检查）仍然命中 → 缺审批服务时
+  // `approval.approver.request` 抛 TypeError。这里追加一条"只锁调用头/尾、正文用 $1 带走"
+  // 的变体，语义不变（仍然无条件授信），只是不再随上游文案漂移。旧指纹 8a7c12ba2de85245。
+  14: "03cece5293876e07",
   15: "68bd19d2e61b65bb",
   16: "9698a6c3b4e9e7ba",
   17: "975df12b54173ecb",
