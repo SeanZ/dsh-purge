@@ -7,9 +7,15 @@
 //       alpha.3 把 displayReason 换成 escalationDisplayReason(mode, justification)。
 //       新变体只锁调用头与收尾、正文 $1 原样带回，仍然无条件授信（无审批服务时
 //       直接 allowed-once），与旧变体并列，旧宿主行为不变。
-//   #67 8cfd0fd1a4e97f0a -> 1681d89c3878f5c1
-//       alpha.3 把这两行挪进 try，缩进 4 tab -> 5 tab。守卫表达式与语义完全一致
-//       （undefined messages 按空数组处理），只是锚点改成缩进无关的正则前缀。
+//   #13 eac61898ab7bddde -> d04b9f2adb06f171
+//       新增 lib/types/escalation.js 的 block 形式变体（四空格 + `=== undefined`）。
+//       旧变体只认 bundle 的 tab + 单行 throw，同一个包的两个副本会一改一不改。
+//       豁免语义未变。
+//   #67 8cfd0fd1a4e97f0a -> 26bbf9bf79ff3d45
+//       两处判断改成缩进无关的锚点（alpha.3 把它们挪进 try，4 tab -> 5 tab），并新增
+//       「preStep 返回处把 messages 归一为数组」——只在两处判断加可选链不覆盖
+//       step() 里的 `for (const message of decision.messages)`。守卫语义仍是
+//       「缺省按空数组处理」，没有改成抛错。
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
@@ -24,7 +30,7 @@ const GATE_FINGERPRINTS = {
   10: "1e1197b70cd4bcd9",
   11: "f732bb54043fe3f6",
   12: "e7e94c2c5d5d6e0f",
-  13: "eac61898ab7bddde",
+  13: "d04b9f2adb06f171",
   14: "61d8c3938aec9334",
   15: "68bd19d2e61b65bb",
   16: "9698a6c3b4e9e7ba",
@@ -39,7 +45,7 @@ const GATE_FINGERPRINTS = {
   61: "c17dcb85eded7e36",
   63: "b92dd05efb4ba817",
   66: "a97a223234457fee",
-  67: "1681d89c3878f5c1",
+  67: "26bbf9bf79ff3d45",
   68: "2590e742617f1242",
 };
 

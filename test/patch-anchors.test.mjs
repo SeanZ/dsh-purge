@@ -428,3 +428,88 @@ test("alpha.3 real host files: anchors hit the shipped source, once, and stay pa
     assert.equal(twice, once, `#${target.id}: a second apply must be a no-op`);
   }
 });
+
+// 0.2.2-alpha.3 的 preStep 返回：decision 的 messages 就在这里定型。
+// 只在循环里两处判断加可选链覆盖不到 step() 的 `for (... of decision.messages)`，
+// 所以归一必须发生在源头这一处。
+const A3_PRESTEP_RETURN =
+  "\t\t\treturn {\n" +
+  "\t\t\t\t...decision,\n" +
+  "\t\t\t\tassembly,\n" +
+  "\t\t\t\tselection,\n" +
+  "\t\t\t\ttoolSet\n" +
+  "\t\t\t};\n";
+
+test("#67 normalizes messages at the preStep return, once, and is idempotent", () => {
+  const out = applyReplacementsToText(A3_PRESTEP_RETURN, patch(67));
+  assert.equal(out.changed, true);
+  assert.equal(out.text.split("messages: Array.isArray(decision.messages)").length - 1, 1);
+  assert.equal(applyReplacementsToText(out.text, patch(67)).changed, false, "normalization must not stack");
+
+  // 违约输入拿到空数组，合法输入原样通过，其余字段不受影响。
+  const run = new Function("decision", "assembly", "selection", "toolSet", `${out.text}\n`);
+  const missing = run({ kind: "enter" }, "asm", "sel", { tools: 1 });
+  assert.deepEqual(missing.messages, []);
+  assert.equal(missing.assembly, "asm");
+  assert.equal(missing.selection, "sel");
+  assert.deepEqual(missing.toolSet, { tools: 1 });
+  assert.deepEqual(run({ kind: "enter", messages: [{ role: "user" }] }, "a", "s", "t").messages, [
+    { role: "user" },
+  ]);
+});
+
+// lib/types/escalation.js 是 tsc 产物：block 形式 + `=== undefined` + 四空格。
+// 只认 bundle 的 tab/单行 throw 时，同一个包里两个副本会一改一不改。
+const A3_ESCALATION_TYPES_BLOCK =
+  "    if (!(WIDER_MODES[effectiveMode] ?? []).includes(mode)) {\n" +
+  "        throw new Error(`sandbox escalation to \"${mode}\" is not strictly wider than this call's current \"${effectiveMode}\" mode`);\n" +
+  "    }\n" +
+  "    if (approval.approver === undefined) {\n" +
+  "        throw new Error(`sandbox escalation to \"${mode}\" requires approval, but no approval service is composed`);\n" +
+  "    }\n" +
+  "    if (approval.agent === undefined) {\n" +
+  "        throw new Error(`sandbox escalation to \"${mode}\" requires approval, but the call has no agent to route it through`);\n" +
+  "    }\n";
+
+test("#13 exempts the widening ladder in both copies of the escalation module", () => {
+  const out = applyReplacementsToText(A3_ESCALATION_TYPES_BLOCK, patch(13));
+  assert.equal(out.changed, true, "the block form must be recognized");
+  assert.ok(out.text.includes("[dsh-purge] escalation bypass"));
+  assert.ok(!out.text.includes("throw new Error"), "every throw must be gone");
+  assert.equal(nodeCheck(out.text).status, 0);
+  assert.equal(applyReplacementsToText(out.text, patch(13)).changed, false);
+});
+
+// 归一之后，任何 `decision.messages` 消费者都不得再裸解引用。
+function unguardedMessagesConsumers(text) {
+  const lines = text.split("\n");
+  const norm = lines.findIndex((line) => line.includes("messages: Array.isArray(decision.messages)"));
+  if (norm < 0) return ["no normalization at the preStep choke point"];
+  const problems = [];
+  lines.forEach((line, index) => {
+    if (!line.includes("decision.messages")) return;
+    if (line.includes("messages: Array.isArray(decision.messages)")) return;
+    if (index < norm) problems.push(`dereference before normalization: ${line.trim()}`);
+    const bare = line.includes("decision.messages.length") && !line.includes("decision.messages?.length");
+    if (bare) problems.push(`unguarded length: ${line.trim()}`);
+  });
+  return problems;
+}
+
+test("#67 leaves no unguarded decision.messages consumer in the real loop file", (t) => {
+  const found = hostFile(
+    "@deepseek-ai/dsh-agent-loop/lib/index.js",
+    "dsh-agent-loop/lib/index.js",
+    "packages/core/agent-loop/lib/index.js",
+  );
+  if (!found) return t.skip("no host tree on this machine");
+  const patched = applyReplacementsToText(fs.readFileSync(found.file, "utf8"), patch(67)).text;
+  assert.deepEqual(unguardedMessagesConsumers(patched), [], "every consumer must come after normalization");
+
+  // 负例：把归一那一行删掉，检查必须失败，否则上面的断言等于没跑。
+  const stripped = patched
+    .split("\n")
+    .filter((line) => !line.includes("messages: Array.isArray(decision.messages)"))
+    .join("\n");
+  assert.notDeepEqual(unguardedMessagesConsumers(stripped), [], "the invariant must be load-bearing");
+});
