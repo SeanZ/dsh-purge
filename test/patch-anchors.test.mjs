@@ -513,3 +513,109 @@ test("#67 leaves no unguarded decision.messages consumer in the real loop file",
     .join("\n");
   assert.notDeepEqual(unguardedMessagesConsumers(stripped), [], "the invariant must be load-bearing");
 });
+
+// --- 真实实例应用后才暴露的一组锚点（2026-11-03 用户应用回执） -------------
+// 共同特征：干净树上"锚点还在、待应用"，应用一次之后却变成 drifted——因为宿主把
+// 同一段逻辑挪了窝或抽了函数，补丁只落地一半就再也 settle 不了。
+// 下面的 fixture 逐字节抄自 alpha.3 原树。
+
+// 同一份 fixture 里放两个方法：补丁的两个 replace 都落在同一个文件上，
+// 只看 editIntent 那段无法判断"两个 marker 都落地"这件事。
+const A3_EDIT_INTENT_DELEGATE =
+  "\twriteIntent(target, actor) {\n" +
+  "\t\tconst owner = this.owner(actor);\n" +
+  "\t\tconst prior = owner ? this.get(owner, target.targetKey) : void 0;\n" +
+  "\t\treturn prior?.kind === \"present\" ? {\n" +
+  "\t\t\tkind: \"replaceIfVersion\",\n" +
+  "\t\t\tversion: prior.version\n" +
+  "\t\t} : { kind: \"createIfAbsent\" };\n" +
+  "\t}\n" +
+  "\teditIntent(target, actor) {\n" +
+  "\t\treturn this.requirePresent(target, actor, \"edit\");\n" +
+  "\t}\n";
+
+test("#17 alpha.3: the editIntent delegation keeps the bypass and both markers land", () => {
+  const out = applyReplacementsToText(A3_EDIT_INTENT_DELEGATE, patch(17));
+  assert.equal(out.changed, true);
+  assert.ok(out.text.includes("return void 0;"), "edits must stop being gated");
+  assert.ok(!out.text.includes("requirePresent"), "the read-first helper call is gone");
+  for (const marker of patch(17).markers) assert.ok(out.text.includes(marker), `missing marker ${marker}`);
+  assert.equal(applyReplacementsToText(out.text, patch(17)).changed, false);
+});
+
+const A3_TOOLS_PIPELINE_APPROVAL =
+  "\t\tif (approval === void 0) return {\n" +
+  "\t\t\tdecision: {\n" +
+  "\t\t\t\tkind: \"deny\",\n" +
+  "\t\t\t\treason: ask.reason ?? `tool \"${exec.name}\" requires approval (not yet supported)`\n" +
+  "\t\t\t},\n" +
+  "\t\t\tapprovalCancelled: false\n" +
+  "\t\t};\n" +
+  "\t\tif (exec.agent === void 0) return {\n" +
+  "\t\t\tdecision: { kind: \"deny\", reason: \"no agent\" },\n" +
+  "\t\t\tapprovalCancelled: false\n" +
+  "\t\t};\n";
+
+test("#62 alpha.3: the approval branch moved into pipeline.js and uses void 0", () => {
+  const out = applyReplacementsToText(A3_TOOLS_PIPELINE_APPROVAL, patch(62));
+  assert.equal(out.changed, true);
+  assert.ok(out.text.includes('if (approval === void 0) return { decision: { kind: "allow" }, approvalCancelled: false };'));
+  // 只换审批分支：没有 agent 的那条仍然 deny，用户点拒绝的路径不受影响。
+  assert.ok(out.text.includes("if (exec.agent === void 0) return {"));
+  assert.equal(applyReplacementsToText(out.text, patch(62)).changed, false);
+});
+
+const A3_TOOLS_PIPELINE_TYPES =
+  "        if (approval === undefined) {\n" +
+  "            return {\n" +
+  "                decision: { kind: 'deny', reason: ask.reason ?? `tool \"${exec.name}\" requires approval (not yet supported)` },\n" +
+  "                approvalCancelled: false,\n" +
+  "            };\n" +
+  "        }\n";
+
+test("#62 alpha.3: the tsc copy of pipeline.js is patched in step with the bundle", () => {
+  const out = applyReplacementsToText(A3_TOOLS_PIPELINE_TYPES, patch(62));
+  assert.equal(out.changed, true);
+  assert.ok(out.text.includes("decision: { kind: 'allow' }"));
+  assert.equal(applyReplacementsToText(out.text, patch(62)).changed, false);
+});
+
+const A3_FILE_REFERENCE_PROMPT =
+  'const FILE_REFERENCE_PROMPT = "Prefer showing the primary results. Do not call present just to list edited source files, or run commands to check whether a diff view will appear. Use present to publish complete deliverables.";\n';
+
+test("#54 alpha.3: the moved deliverable prompt still loses the prohibition, marker stays out of the prompt", () => {
+  const out = applyReplacementsToText(A3_FILE_REFERENCE_PROMPT, patch(54));
+  assert.equal(out.changed, true);
+  assert.ok(!out.text.includes("Do not call present"), "the prohibition sentence is gone");
+  assert.ok(out.text.includes("[dsh-purge] deliverable prohibition removed"));
+  assert.ok(
+    out.text.includes('/* [dsh-purge] deliverable prohibition removed */ "Prefer showing'),
+    "the marker must sit outside the string literal so the model never sees it",
+  );
+  assert.equal(applyReplacementsToText(out.text, patch(54)).changed, false);
+});
+
+test("fileOptional targets really stopped carrying the behavior on alpha.3", (t) => {
+  // fileOptional 的语义是"这个目标在新版宿主里已不承载该行为"。声明错了会把真漂移
+  // 静默成 skipped，所以这里反过来钉住：被声明 optional 的目标必须一个锚点都不中。
+  const cases = [
+    [54, "deliverables-prompt", ["@deepseek-ai/dsh-client-ui-deliverables/lib/index.js", "dsh-client-ui-deliverables/lib/index.js", "packages/client/ui-deliverables/lib/index.js"]],
+    [60, "dsh-tools", ["@deepseek-ai/dsh-tools/lib/index.js", "dsh-tools/lib/index.js", "packages/core/tools/lib/index.js"]],
+    [62, "dsh-tools-types", ["@deepseek-ai/dsh-tools/lib/types/index.js", "dsh-tools/lib/types/index.js", "packages/core/tools/lib/types/index.js"]],
+  ];
+  let checked = 0;
+  for (const [id, key, candidates] of cases) {
+    const found = hostFile(...candidates);
+    if (!found) return t.skip("no host tree on this machine");
+    const text = fs.readFileSync(found.file, "utf8");
+    for (const replacement of patch(id).replacements) {
+      if (!replacement.pattern) continue;
+      const hit = replacement.pattern instanceof RegExp
+        ? new RegExp(replacement.pattern.source, replacement.pattern.flags.replace("g", "")).test(text)
+        : text.includes(replacement.pattern);
+      assert.equal(hit, false, `#${id}: ${key} still carries an anchor, so it must not be fileOptional`);
+    }
+    checked += 1;
+  }
+  assert.equal(checked, cases.length, "every declared-optional target must have been inspected");
+});

@@ -11,6 +11,10 @@
 //       新增 lib/types/escalation.js 的 block 形式变体（四空格 + `=== undefined`）。
 //       旧变体只认 bundle 的 tab + 单行 throw，同一个包的两个副本会一改一不改。
 //       豁免语义未变。
+//   #17 975df12b54173ecb -> 68caa8f4cdd38edb
+//       alpha.3 把 editIntent 的读优先判定抽成 requirePresent(target, actor, verb)，
+//       旧锚点抄的是展开后的函数体，只剩写意图那一半能落地——补丁永远 settle 不了、
+//       应用后反而报 drifted。新增只锁委托行形状的变体，豁免语义不变。
 //   #67 8cfd0fd1a4e97f0a -> 26bbf9bf79ff3d45
 //       两处判断改成缩进无关的锚点（alpha.3 把它们挪进 try，4 tab -> 5 tab），并新增
 //       「preStep 返回处把 messages 归一为数组」——只在两处判断加可选链不覆盖
@@ -34,7 +38,7 @@ const GATE_FINGERPRINTS = {
   14: "61d8c3938aec9334",
   15: "68bd19d2e61b65bb",
   16: "9698a6c3b4e9e7ba",
-  17: "975df12b54173ecb",
+  17: "68caa8f4cdd38edb",
   30: "c844cddcc7933514",
   31: "f80165c28dc19a5e",
   34: "1ecd46f5b4067b0f",
