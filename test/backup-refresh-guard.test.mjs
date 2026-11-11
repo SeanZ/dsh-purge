@@ -1,12 +1,25 @@
 // refreshStaleBaksForUpgrade 的升级检测：只认 "[dsh-purge]" marker 会把
 // "已打补丁但没有 marker" 的文件误判成官方新版，从而把 .dshpurge.bak 冲成补丁后内容。
 // 结果是回滚变 no-op，而状态页依旧全绿。
-import { test } from "node:test";
+import { test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { refreshStaleBaksForUpgrade, patchedTargetStillPatched } from "../lib/core.js";
+
+// 每个用例显式声明临时维护目录，遵循 Web 实例写入边界。
+let previousHome, maintenanceHome;
+beforeEach(() => {
+  previousHome = process.env.DSH_HOME;
+  maintenanceHome = fs.mkdtempSync(path.join(os.tmpdir(), "purge-refresh-home-"));
+  process.env.DSH_HOME = maintenanceHome;
+});
+afterEach(() => {
+  if (previousHome === undefined) delete process.env.DSH_HOME;
+  else process.env.DSH_HOME = previousHome;
+  fs.rmSync(maintenanceHome, { recursive: true, force: true });
+});
 
 // #94 SKILL_BADGE_DESCRIPTION_NEUTRAL 的真实锚点与产物：
 const VENDOR = 'Add the official “powered by dsh” badge to documents, pull requests, merge requests, and other content produced with DeepSeek Harness.';

@@ -51,7 +51,8 @@
     "test:electron": "node scripts/check-electron-selfcheck.mjs && node scripts/check-electron-diagnostic-target.mjs && node scripts/check-macos-handoff.mjs && npm run test:maintenance:electron",
     "build:market": "node scripts/build-market.mjs",
     "test:maintenance:electron": "node scripts/check-maintenance-runtime.mjs",
-    "test:next-host": "node --test test/resolve-instance-target.test.mjs test/owner-review-fixes.test.mjs test/http-handlers-target.test.mjs test/windows-lock.test.mjs"
+    "test:next-host": "node --test test/resolve-instance-target.test.mjs test/owner-review-fixes.test.mjs test/http-handlers-target.test.mjs test/windows-lock.test.mjs",
+    "test:web-baseline": "node --test test/maintenance-target.test.mjs test/cli-repair.test.mjs test/display-rollup.test.mjs test/instance.test.mjs test/host-backup.test.mjs test/maintenance-boundaries.test.mjs test/maintenance-lifecycle.test.mjs test/maintenance-cli.test.mjs test/partial-status.test.mjs test/drift-status.test.mjs"
   },
   "license": "MIT",
   "keywords": [
