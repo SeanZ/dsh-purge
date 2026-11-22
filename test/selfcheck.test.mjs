@@ -161,7 +161,10 @@ test("absent optional targets, disabled checks and unknown states retain distinc
   const {tallyPatchStatus}=await import("../lib/selfcheck.js");
   const patches=[{id:1},{id:2,optional:true},{id:3},{id:4},{id:5,settleWhenAbsent:true}];
   assert.deepEqual(tallyPatchStatus({1:"missing_file",2:"missing_file",3:"off",5:"skipped",4:"disabled"},patches),
-    {applied:0,total:1,all:5,na:0,skipped:1,missing_file:2,off:1,disabled:1,not_applicable:4,partial:0});
+    {applied:0,total:1,all:5,na:0,skipped:1,missing_file:2,off:1,disabled:1,not_applicable:4,partial:0,superseded:0});
+  // 旧规则被原生机制取代：既不计入分母，也不混进任何失败计数。
+  assert.deepEqual(tallyPatchStatus({1:"superseded"},[{id:1}]),
+    {applied:0,total:0,all:1,na:0,skipped:0,missing_file:0,off:0,disabled:0,not_applicable:1,partial:0,superseded:1});
 });
 
 const persona = (prefix) => `- id: persona\n  name: '@deepseek-ai/dsh-persona'\n  config:\n    prefix: ${prefix}\n`;

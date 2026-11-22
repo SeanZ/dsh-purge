@@ -75,6 +75,7 @@ purge-community probe new
 | 路径 | 内容 |
 | --- | --- |
 | `$DSH_HOME/dsh-purge/tuning.json` · `probe.json` | `{boost, injectPosition, askNoBlock}` / 探针 nonce（30 分钟 TTL） |
+| `$DSH_HOME/dsh-purge/runtime-evidence.json` | 运行时证据（如 `completeComposition`）：宿主换了机制、行为要靠运行时补回时，状态页据此判"已接管"还是"仍然缺失" |
 | `$DSH_HOME/dsh-purge/anchor-overrides.json` | 本地重锚覆盖（不改插件源码；删掉即恢复出厂锚点） |
 | `$DSH_HOME/dsh-purge-community/audit.jsonl` | 动作审计（1MB 轮转，保留 2 份）；面板「维护 → 最近动作」 |
 | `$DSH_HOME/dsh-purge/applied.json` · `installed-rev` | 上次应用的插件版本 |

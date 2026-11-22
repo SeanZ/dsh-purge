@@ -7,3 +7,7 @@
 上游已通过patch-state.mjs统一状态分类与逐条证据，本基线退役自有DISPLAY_ATTENTION和显示汇总实现。验证异常不可被算作ready，沿用上游新状态口径，不保留旧返回字段兼容层。
 
 新增文件以Prettier和oxlint检查，修改JavaScript运行node --check；保留上游大文件格式。npm run test:web-baseline覆盖临时两实例文件、冲突目标HTTP入口、生命周期、备份和诊断，不代表真实模型或生产应用验收。
+
+## 0.2.3-alpha.1 运行时适配
+
+complete段在捕获前组合附加内容，覆盖晚挂载与不同服务实例，保留postPrompt；55/72旧规则沿用原生增量机制，状态单列superseded。40的就绪需要运行时证据。已知诊断边界为撤销写盘失败残留true及PID复用，当前决定不修复；不能宣称证据具备完整启动身份校验。真实模块探针与相关回归已验证，不代表真实模型效果。

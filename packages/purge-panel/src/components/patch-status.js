@@ -15,6 +15,8 @@ export function statusKind(st) {
   if (st === "unmatched") return "bad";
   if (st === "partial") return "bad";
   if (st === "drifted") return "bad";
+  // 旧规则已被宿主原生机制取代：既不是故障，也不是我们写进去的。
+  if (st === "superseded") return "miss";
   if (st === "disabled") return "muted";
   if (st === "na") return "ok";
   if (
@@ -34,6 +36,7 @@ export function statusLabel(st, t) {
   if (st === "unmatched") return t("status.unmatched");
   if (st === "partial") return t("status.partial");
   if (st === "drifted") return t("status.drifted");
+  if (st === "superseded") return t("status.superseded");
   if (st === "disabled") return t("status.disabled");
   if (st === "skipped") return t("health.na");
   if (st === "missing_file") return t("file.missing_file");
@@ -156,6 +159,7 @@ export function tallyPatches(rows) {
     unmatched: counts.unmatched,
     partial: counts.partial,
     drifted: counts.drifted,
+    superseded: counts.superseded,
     disabled: counts.disabled + counts.off,
     skipped: counts.skipped,
     unverified:
@@ -535,6 +539,8 @@ export function PatchGroups({ state }) {
         notes.push(t("metric.unverifiedShort", { n: tally.unverified }));
       if (tally.drifted)
         notes.push(t("metric.driftedShort", { n: tally.drifted }));
+      if (tally.superseded)
+        notes.push(t("metric.supersededShort", { n: tally.superseded }));
       if (tally.disabled)
         notes.push(t("metric.disabledShort", { n: tally.disabled }));
       // 「本端不适用」已经由顶部数字和组头灰色胶囊表达，这里不再重复一个「跳过 n」。

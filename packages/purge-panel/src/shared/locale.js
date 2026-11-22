@@ -101,6 +101,7 @@ export const zh = {
   "metric.unmatchedShort": "没对上 {n}",
   "metric.partialShort": "部分命中 {n}",
   "metric.driftedShort": "锚点漂移 {n}",
+  "metric.supersededShort": "由新版接管 {n}",
   "metric.disabledShort": "可选关闭 {n}",
   "metric.skipShort": "跳过 {n}",
   "metric.naShort": "本端不适用 {n}",
@@ -174,6 +175,8 @@ export const zh = {
   "hint.skipped": "目标文件不在本安装里。",
   "hint.missing_file": "目标文件不在本安装里。",
   "hint.drifted": "锚点漂移：宿主改过这段代码，需要更新补丁。",
+  "hint.superseded":
+    "旧规则已被宿主原生机制取代：锚点不在，本插件不再改写这里，也不计入失败。",
   "hint.unmatched": "锚点没对上：宿主版本不匹配。",
   "hint.partial": "部分目标文件命中，另一个存在但没对上。",
   "hint.off": "已关闭。",
@@ -189,6 +192,7 @@ export const zh = {
   "status.partial": "部分命中",
   "status.partialDetail": "（{done}/{total} 目标）",
   "status.drifted": "锚点漂移",
+  "status.superseded": "由新版接管",
   "status.disabled": "可选关闭",
   "status.skipped": "跳过",
   "apply.hint":
@@ -598,6 +602,7 @@ export const en = {
   "metric.unmatchedShort": "No match {n}",
   "metric.partialShort": "Partial {n}",
   "metric.driftedShort": "Drifted {n}",
+  "metric.supersededShort": "Superseded {n}",
   "metric.disabledShort": "Opt-in off {n}",
   "metric.skipShort": "Skipped {n}",
   "metric.naShort": "Not for this host {n}",
@@ -678,6 +683,8 @@ export const en = {
   "hint.missing_file": "Target file is not part of this install.",
   "hint.drifted":
     "Drifted: the host changed this code; the patch needs an update.",
+  "hint.superseded":
+    "The old rule is replaced by a native host mechanism: the anchor is gone, nothing is rewritten here, and it is not counted as a failure.",
   "hint.unmatched": "No match: host version mismatch.",
   "hint.partial": "Some targets matched, another existed but did not match.",
   "hint.off": "Off.",
@@ -693,6 +700,7 @@ export const en = {
   "status.partial": "Partial",
   "status.partialDetail": " ({done}/{total} targets)",
   "status.drifted": "Drifted",
+  "status.superseded": "Superseded",
   "status.disabled": "Opt-in off",
   "status.skipped": "Skipped",
   "apply.hint":

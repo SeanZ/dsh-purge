@@ -9199,6 +9199,7 @@ var zh = {
   "metric.unmatchedShort": "\u6CA1\u5BF9\u4E0A {n}",
   "metric.partialShort": "\u90E8\u5206\u547D\u4E2D {n}",
   "metric.driftedShort": "\u951A\u70B9\u6F02\u79FB {n}",
+  "metric.supersededShort": "\u7531\u65B0\u7248\u63A5\u7BA1 {n}",
   "metric.disabledShort": "\u53EF\u9009\u5173\u95ED {n}",
   "metric.skipShort": "\u8DF3\u8FC7 {n}",
   "metric.naShort": "\u672C\u7AEF\u4E0D\u9002\u7528 {n}",
@@ -9266,6 +9267,7 @@ var zh = {
   "hint.skipped": "\u76EE\u6807\u6587\u4EF6\u4E0D\u5728\u672C\u5B89\u88C5\u91CC\u3002",
   "hint.missing_file": "\u76EE\u6807\u6587\u4EF6\u4E0D\u5728\u672C\u5B89\u88C5\u91CC\u3002",
   "hint.drifted": "\u951A\u70B9\u6F02\u79FB\uFF1A\u5BBF\u4E3B\u6539\u8FC7\u8FD9\u6BB5\u4EE3\u7801\uFF0C\u9700\u8981\u66F4\u65B0\u8865\u4E01\u3002",
+  "hint.superseded": "\u65E7\u89C4\u5219\u5DF2\u88AB\u5BBF\u4E3B\u539F\u751F\u673A\u5236\u53D6\u4EE3\uFF1A\u951A\u70B9\u4E0D\u5728\uFF0C\u672C\u63D2\u4EF6\u4E0D\u518D\u6539\u5199\u8FD9\u91CC\uFF0C\u4E5F\u4E0D\u8BA1\u5165\u5931\u8D25\u3002",
   "hint.unmatched": "\u951A\u70B9\u6CA1\u5BF9\u4E0A\uFF1A\u5BBF\u4E3B\u7248\u672C\u4E0D\u5339\u914D\u3002",
   "hint.partial": "\u90E8\u5206\u76EE\u6807\u6587\u4EF6\u547D\u4E2D\uFF0C\u53E6\u4E00\u4E2A\u5B58\u5728\u4F46\u6CA1\u5BF9\u4E0A\u3002",
   "hint.off": "\u5DF2\u5173\u95ED\u3002",
@@ -9281,6 +9283,7 @@ var zh = {
   "status.partial": "\u90E8\u5206\u547D\u4E2D",
   "status.partialDetail": "\uFF08{done}/{total} \u76EE\u6807\uFF09",
   "status.drifted": "\u951A\u70B9\u6F02\u79FB",
+  "status.superseded": "\u7531\u65B0\u7248\u63A5\u7BA1",
   "status.disabled": "\u53EF\u9009\u5173\u95ED",
   "status.skipped": "\u8DF3\u8FC7",
   "apply.hint": "\u70B9\u5E94\u7528\u4F1A\u6253\u8865\u4E01\u5E76\u628A\u5F53\u524D\u9ED8\u8BA4\u63D0\u793A\u8BCD\u6302\u4E0A\uFF0C\u6846\u91CC\u4ECD\u662F\u63D2\u4EF6\u65E7\u9ED8\u8BA4\u65F6\u81EA\u52A8\u5237\u5230\u52A0\u5BC6\u69FD\uFF0C\u4E0D\u5FC5\u518D\u70B9\u4FDD\u5B58\u3002\u53EA\u6709\u4F60\u53E6\u5199\u7684\u7A3F\u624D\u4F1A\u6309\u6846\u843D\u76D8\u3002\u5F85\u5E94\u7528=\u539F\u6587\u8FD8\u5728\u3002\u8DF3\u8FC7=\u5F53\u524D\u7248\u672C\u4E0D\u9700\u8981\u6216\u7EC4\u4EF6\u672A\u5B89\u88C5\u3002",
@@ -9647,6 +9650,7 @@ var en = {
   "metric.unmatchedShort": "No match {n}",
   "metric.partialShort": "Partial {n}",
   "metric.driftedShort": "Drifted {n}",
+  "metric.supersededShort": "Superseded {n}",
   "metric.disabledShort": "Opt-in off {n}",
   "metric.skipShort": "Skipped {n}",
   "metric.naShort": "Not for this host {n}",
@@ -9714,6 +9718,7 @@ var en = {
   "hint.skipped": "Target file is not part of this install.",
   "hint.missing_file": "Target file is not part of this install.",
   "hint.drifted": "Drifted: the host changed this code; the patch needs an update.",
+  "hint.superseded": "The old rule is replaced by a native host mechanism: the anchor is gone, nothing is rewritten here, and it is not counted as a failure.",
   "hint.unmatched": "No match: host version mismatch.",
   "hint.partial": "Some targets matched, another existed but did not match.",
   "hint.off": "Off.",
@@ -9729,6 +9734,7 @@ var en = {
   "status.partial": "Partial",
   "status.partialDetail": " ({done}/{total} targets)",
   "status.drifted": "Drifted",
+  "status.superseded": "Superseded",
   "status.disabled": "Opt-in off",
   "status.skipped": "Skipped",
   "apply.hint": "Apply writes patches and hangs the current default prompt. A stale plugin default in the box is refreshed from the sealed slot; a separate save is unnecessary. Only a prompt you wrote yourself is kept from the box. Pending = original text still present. Skipped = not needed for this version or the component is not installed.",
@@ -10294,7 +10300,8 @@ function RewindSetting() {
 
 // ../../lib/patch-state.mjs
 function patchNotApplicable(patch, status) {
-  return status === "na" || status === "off" || status === "disabled" || status === "not_needed" && patch?.id === 76 || status === "missing_file" && patch?.optional === true || status === "skipped" && patch?.settleWhenAbsent === true;
+  return status === "na" || status === "off" || status === "disabled" || // 旧规则已被宿主原生机制取代：本插件在这里没有可做的事，也不该显示成故障。
+  status === "superseded" || status === "not_needed" && patch?.id === 76 || status === "missing_file" && patch?.optional === true || status === "skipped" && patch?.settleWhenAbsent === true;
 }
 function patchStateCategory(patch, status) {
   if (patchNotApplicable(patch, status)) return "inactive";
@@ -10319,13 +10326,14 @@ function summarizePatchRows(rows) {
     off: 0,
     disabled: 0,
     unmatched: 0,
-    drifted: 0
+    drifted: 0,
+    superseded: 0
   };
   for (const row of rows || []) {
     const status = row.status ?? row.st;
     const category = patchStateCategory(row, status);
     out.all++;
-    if (["partial", "missing_file", "skipped", "na", "off", "disabled", "unmatched", "drifted"].includes(status))
+    if (["partial", "missing_file", "skipped", "na", "off", "disabled", "unmatched", "drifted", "superseded"].includes(status))
       out[status]++;
     if (category === "inactive") out.not_applicable++;
     else {
@@ -10343,6 +10351,7 @@ function statusKind(st) {
   if (st === "unmatched") return "bad";
   if (st === "partial") return "bad";
   if (st === "drifted") return "bad";
+  if (st === "superseded") return "miss";
   if (st === "disabled") return "muted";
   if (st === "na") return "ok";
   if (st === "missing_file" || st === "skipped" || st === "unlocated" || st === "off")
@@ -10356,6 +10365,7 @@ function statusLabel(st, t) {
   if (st === "unmatched") return t("status.unmatched");
   if (st === "partial") return t("status.partial");
   if (st === "drifted") return t("status.drifted");
+  if (st === "superseded") return t("status.superseded");
   if (st === "disabled") return t("status.disabled");
   if (st === "skipped") return t("health.na");
   if (st === "missing_file") return t("file.missing_file");
@@ -10449,6 +10459,7 @@ function tallyPatches(rows) {
     unmatched: counts.unmatched,
     partial: counts.partial,
     drifted: counts.drifted,
+    superseded: counts.superseded,
     disabled: counts.disabled + counts.off,
     skipped: counts.skipped,
     unverified: counts.unknown + (rows || []).filter(
@@ -10780,6 +10791,8 @@ function PatchGroups({ state }) {
         notes.push(t("metric.unverifiedShort", { n: tally.unverified }));
       if (tally.drifted)
         notes.push(t("metric.driftedShort", { n: tally.drifted }));
+      if (tally.superseded)
+        notes.push(t("metric.supersededShort", { n: tally.superseded }));
       if (tally.disabled)
         notes.push(t("metric.disabledShort", { n: tally.disabled }));
       const expanded = !!open[key];

@@ -37,6 +37,7 @@
 - **0.2.2-rc.1**：仍未完整适配。六项旧补丁 #14/#17/#60/#62/#67/#74 保持原定义、尚未修复；原生消息回合契约测试通过，但回调缺少 messages 的异常仍应暴露，不可吞掉错误或丢弃输入。测试范围与未确认事项见 [诊断记录](maintenance-022-diagnostics.md)。
 - **0.2.2-rc.2 / rc.3**：rc.3 是当前首部声明的主验证目标（见 [§1](#c-matrix)）。Windows 上的 rc.3 只做了部分验证——不要写成"Windows 全量通过"。
 - **0.2.2-alpha.2、rc.4**：`unknown`。`unknown` 不是"大概可以"，是"没有证据"。
+- **0.2.3-alpha.1**：系统指令改为"按来源增量提交"。`complete` 预设的段落先被捕获，waterfall 跑完后宿主按捕获快照还原，运行时再往返回对象里补段进不了 `systemUpdates`。插件改为在 `section()` 注册期把注入折进 complete 段自身（`installCompleteSectionGuard`），并在挂载时**补写已经注册的 complete 段**（插件晚启用、热更新、预设先挂载）；普通模式会注册的 `dsh-purge*` 附加段（主注入、强化段、探针、后置提示 `postPrompt`）也一起折进去，否则它们在 complete 预设下会静默失效。每个 `systemPrompt` 服务实例单独挂载，不是"第一个挂上就再也不管"。旧规则 #40/#55/#72/#87/#88 因此标注 `superseded`（见 [§4](#c-fileoptional)），既不是漂移也不是已应用。该发行在 `dshReleases` 里仍保持 `unknown`——没有做逐条锚点全量回归，不要写成 `compatible`。
 - **NEXT 宿主家族**：独立、未验证。包名识别或磁盘写入成功都不构成完整运行兼容证明；#102 的 NEXT 桌面发行版完整兼容仍未确认。
 - 隔离安装测试（含 `scripts/check-architecture-runtime.mjs` 调整测试副本布局的那类）只代表安装路径，不代表模型行为、GUI 功能或宿主补丁全量验收。
 
@@ -50,7 +51,7 @@
 | --- | --- | --- |
 | 破甲强化段（boost） | `-50000`（最前） | 实测同一组 6 条易拒请求：boost 在最前 0/6 首拒，放 9500 时 2/6 首拒（issue #76） |
 | 注入正文（tail 模式） | `10150` | `inject tail\|both` 只影响注入正文，**不移动**强化段 |
-| complete 模式注入段 | 排在官方段之前 | `[...dshPurgeSections, ...dshPurgeRest]`，旧宿主有专门迁移 pattern |
+| complete 模式注入段 | 折进 `deployment:persona-prefix` 段内 | 0.2.3-alpha.1 起在 `section()` 注册期组合（含已注册定义的补写），预设正文在前，`dsh-purge*` 附加段按注册 order 在后；老宿主仍由 #40 的宿主补丁保留独立段 |
 
 - 覆盖顺序：`PURGE_BOOST_ORDER`（环境变量）> `$DSH_HOME/dsh-purge/boost-order.json`（`{"order": 9500}`）> 默认。改文件后开新会话即生效。
 - 切换段位：`purge-community inject head|tail|both`（写 tuning + 记 `tuning_setting`，下一轮生效，不需要重启）。
@@ -61,7 +62,7 @@
 
 ## 4. `fileOptional`、`partial` 与已知不适用目标
 
-- 逐文件状态：`patchStatusDetail().files[id] = [{key, path, status}]`，`status ∈ applied | pending | skipped | unmatched | missing | unreadable`；接口字段 `patch_files`。`patchStatus` 本身仍按补丁聚合。
+- 逐文件状态：`patchStatusDetail().files[id] = [{key, path, status}]`，`status ∈ applied | pending | skipped | superseded | unmatched | missing | unreadable`；接口字段 `patch_files`。`patchStatus` 本身仍按补丁聚合。
 - `partial`：**只有**声明 `fileAllRequired: true` 的多文件补丁才会产生，含义是"至少一个**存在的**目标文件没命中、另一个已命中"。`patchStatusReady("partial")` 为 false，`patchDrift` 报 `partial_drift`，自检计入异常。没有该标记的老补丁保持原聚合行为——目标文件随宿主版本增删，一律判部分命中会把真漂移淹掉。
 - `fileOptional: ["key"]`：这个目标**在新版宿主里已不承载该行为**，不参与 `partial` 判定，但仍逐文件出现在 `patchStatusDetail().files` 里、状态照实显示。加之前必须核对：目标文件是真没这段逻辑，还是只换了写法——说不清就不加。
 - 当前 `fileOptional` 名单与依据：
@@ -74,6 +75,10 @@
 
 - #50 **不是** optional，而是补了等价的"已达成"标记；#76 声明 `silentWhenMissing`，缺失时判 `skipped` 而不报红。
 - 漂移判定：目标文件存在、marker 不在、锚点全不中 → `drifted`（不再软成功）；自标记补丁与 `silentWhenMissing` 补丁仍判 `skipped`；`fileOptional` 的目标漂移不牵连整条补丁。整段机制与排查动作见 [troubleshooting §7](troubleshooting.md#t-drift)。
+- `superseded`（旧规则被宿主原生机制取代）：补丁声明 `supersededBy: {since, by, native, note, requiresRuntime?}`；**锚点全不中、且 `native` 里的替代机制痕迹在目标文件里都在**时才判该状态。它计入 `not_applicable`、不计入分母与失败数，`patchStatusReady` 为 true；`patchDrift` 把它放进单独的 `superseded` 桶，不混进 `drifted`/`optionalDrift`。**它不是 `applied`**：本插件没有写任何东西，面板显示"由新版接管"并附原因。锚点还在时照旧判 `pending`，替代机制不在时照旧判 `drifted`——不能用来掩盖真问题。
+- `requiresRuntime`（目前只有 #40）：声明这条规则的行为由**插件运行时**补回，因此除宿主痕迹外还要有运行时挂载证据，否则照旧判 `drifted`（功能确实缺失）。证据来自 `$DSH_HOME/dsh-purge/runtime-evidence.json`：插件启动时先把 `completeComposition` 置 false，`installCompleteSectionGuard` 真的挂上（含晚挂载补写）再写 true。
+- 证据按**写进程 pid** 逐条记录（`{version:2, keys:{<name>:[{pid,mounted,host,at}]}}`）：读取时校验 pid 存活、DSH_HOME 与宿主归属，写进程一退出记录立即失效——所以"重启后插件被禁用/加载失败"不会沿用上一次启动的"已挂载"；同一 home 里只要有一条存活记录说没挂上，也按未确认处理。没有证据、旧格式、读失败都判未确认，绝不猜成已接管。残留边界：pid 被系统复用（概率极低，后果是单条状态偏绿）；多进程共用一个 home 且宿主不同，跨进程只能确认"有存活进程挂上了"，面板所在进程仍以自身记录为准。
+- 注册期组合以**服务能力**判定：只有 `systemPrompt` 服务原型上存在 `systemUpdates`（0.2.3-alpha.1 引入）才开启，读不到就保守关闭。老宿主由 #40 的宿主补丁保留 complete 之后的独立注入段，两边同时开会把同一段注入写两遍。判定不读版本号，因此封在归档里或目录尚未定位时也不会误判。
 
 <a id="c-desktop-web"></a>
 
@@ -98,3 +103,7 @@
 - #127 的 httpServer/webServer 契约问题未合入——不要自行加未经验证的服务别名，也不要把 HTTP 可连接当作消费者正常启动。
 - 受影响 Windows 4090 的 Defender 完整回滚阻断仍未解决（见 [发行范围](releases/1.6.70.md)）；不能把"维护者要求发布"说成问题已修复，也不关防护、不加白名单、不把组件测试说成完整通过。
 - 磁盘已应用 ≠ 当前进程已加载；安装成功 ≠ 补丁生效；补丁生效 ≠ 模型行为达标。这三件事分别取证，不互相代替。
+
+### 运行时证据的已知边界
+
+当前记录在撤销写盘失败时可能继续读取旧的成功状态；进程存活检查也尚未区分 PID 复用。此版本保留这两项诊断边界，不据状态显示承诺所有实际注入场景已验证。
