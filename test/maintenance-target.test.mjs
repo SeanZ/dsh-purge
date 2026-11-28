@@ -203,6 +203,8 @@ test("真实 Cordis HTTP 处理器在请求体写入和重启之前拒绝冲突�
     }
     const ctx=new Context();
     try {
+      // 实例隔离检查发生在新版 owner 鉴权之后，夹具先提供合法 owner。
+      ctx.provide('connection',{admit:()=>({peer:{principal:{kind:'owner'}}})});
       await ctx.plugin(Web);
       await ctx.plugin({name:'test-isolation-http',apply:host=>installWebServer(host,{})});
       await new Promise(resolve=>setImmediate(resolve));

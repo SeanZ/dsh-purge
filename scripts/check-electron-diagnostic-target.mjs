@@ -14,7 +14,9 @@ try {
   const relative = "dsh/node_modules/@deepseek-ai";
   const host = path.join(resources, "app", relative);
   const files = {
-    "package.json": JSON.stringify({main:"main.js"}),
+    "package.json": JSON.stringify({name:"dsh-desktop",main:"./out/main/index.js",version:"0.14.0"}),
+    "out/main/index.js": "// fixture",
+    "node_modules/@deepseek-ai/dsh-agent-instructions/lib/index.js": "// flat shell core",
     "main.js": "// sealed old shell must not win",
     [`${relative}/dsh-desktop-host/package.json`]: '{"name":"@deepseek-ai/dsh-desktop-host","version":"0.2.1-rc.2"}',
     [`${relative}/dsh-desktop-host/lib/index.js`]: "// fixture",
@@ -47,6 +49,22 @@ try {
     [path.join(profile, "cordis.patch.yml")]: '- id: permission-presets\n  config:\n    defaultPreset: workspace-write\n    presets:\n      workspace-write:\n        sandbox: workspace-write\n        approval: on-request\n',
     [path.join(home, "prompt-inject.md")]: "Private fixture text; diagnostic reads only.\n",
   };
+  // In the sealed 0.14 shell the only physical sidecar contains native modules.
+  fs.renameSync(path.join(resources,"app"),path.join(tmp,"saved-app"));
+  const sidecar=path.join(resources,"app.asar.unpacked/node_modules/@deepseek-ai");
+  fs.mkdirSync(sidecar,{recursive:true});
+  const checkSealed = `
+    import assert from "node:assert/strict";
+    import path from "node:path";
+    const {diagnosticHost} = await import(${JSON.stringify(pathToFileURL(path.join(root,"lib/instance.js")).href)});
+    const resources=process.env.PURGE_TEST_RESOURCES;
+    const target=path.join(resources,"app.asar/node_modules/@deepseek-ai");
+    const opts={env:{}, argv:[process.execPath,path.join(resources,"app.asar/out/main/index.js")],resourcesPath:resources};
+    assert.equal(diagnosticHost(opts),target);
+    assert.equal(diagnosticHost({...opts,aiBase:target}),target);
+  `;
+  execFileSync(binary,["--input-type=module","-e",checkSealed],{env:{...process.env,ELECTRON_RUN_AS_NODE:"1",DSH_HOME:home,PURGE_TEST_RESOURCES:resources}});
+  fs.renameSync(path.join(tmp,"saved-app"),path.join(resources,"app"));
   for (const [file, text] of Object.entries(preserved)) fs.writeFileSync(file, text);
   const source = `
     import assert from 'node:assert/strict';
@@ -80,18 +98,23 @@ try {
       process.env.DSH_SURFACE='desktop';
       const {Context,Service}=await import(${JSON.stringify(pathToFileURL(path.join(root, "node_modules/@deepseek-ai/cordis/lib/index.js")).href)});
       const {installWebServer}=await import(${JSON.stringify(pathToFileURL(path.join(root, "lib/index.js")).href)});
+      class TestConnection extends Service {
+        constructor(ctx){super(ctx,'connection');}
+        admit(req){return req.headers.authorization === 'Bearer fixture-owner' ? {peer:{principal:{kind:'owner'}}} : {rejection:401};}
+      }
       class Web extends Service {
         constructor(ctx){super(ctx,'webServer');this.routes=new Map();}
         register(spec){this.routes.set(spec.path,spec);return ()=>this.routes.delete(spec.path);}
       }
       const ctx=new Context();
       try {
+        await ctx.plugin(TestConnection);
         await ctx.plugin(Web);
         installWebServer(ctx,{});
         await new Promise(resolve=>setImmediate(resolve));
         const read=async name=>{
           const response={writeHead(code){this.code=code;},end(body){this.body=body;}};
-          await ctx.webServer.routes.get('/dsh-purge/'+name).handler({method:'GET',headers:{host:'127.0.0.1:3080'}},response);
+          await ctx.webServer.routes.get('/dsh-purge/'+name).handler({method:'GET',headers:{host:'127.0.0.1:3080',authorization:'Bearer fixture-owner'}},response);
           assert.equal(response.code,200,response.body);
           return JSON.parse(response.body);
         };

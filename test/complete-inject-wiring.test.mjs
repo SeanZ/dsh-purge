@@ -13,6 +13,7 @@ import {
   registerPromptSections,
 } from "../lib/index.js";
 import { readRuntimeEvidence } from "../lib/runtime-evidence.js";
+import { BOOST_TEXT } from "../lib/boost.js";
 
 const INJECT = "WIRING_INJECT_BODY";
 const POST = "WIRING_POST_BODY";
@@ -120,6 +121,37 @@ const COMPLETE = {
   order: 0,
   complete: true,
 };
+
+test("complete 组合遵守独立的 main 和 boost 开关", async () => {
+  for (const layers of [
+    { main: false, boost: true },
+    { main: true, boost: false },
+  ]) {
+    await withHome(async (home) => {
+      fs.writeFileSync(
+        path.join(home, "dsh-purge", "tuning.json"),
+        JSON.stringify({ boost: true }),
+      );
+      const root = new Context();
+      await root.plugin(Prompt);
+      try {
+        await mount(root, { ...CFG, layers });
+        root.systemPrompt.section({
+          ...COMPLETE,
+          text: () => "COMPLETE_PERSONA",
+        });
+        await root.systemPrompt.assemble();
+        assert.equal(root.systemPrompt.committed.includes(INJECT), layers.main);
+        assert.equal(
+          root.systemPrompt.committed.includes(BOOST_TEXT),
+          layers.boost,
+        );
+      } finally {
+        await root.fiber.dispose();
+      }
+    });
+  }
+});
 
 test("installIdentityOverride composes the inject and postPrompt into a complete preset", async () => {
   await withHome(async () => {
