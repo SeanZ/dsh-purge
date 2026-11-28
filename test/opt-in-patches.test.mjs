@@ -20,14 +20,17 @@ import { incompleteApplyDetail } from "../packages/purge-panel/src/shared/apply-
 
 const REPEAT_SOURCE = [
   '\tctx.on("tools/post-execute", async (exec, _result, next) => {',
-  '\t\tconst reminder = observe(exec);',
-  '\t\tconst downstream = await next();',
-  '\t\tif (!reminder) return downstream;',
-  '\t\treturn { ...downstream, additionalContexts: prependContext(reminder, downstream.additionalContexts) };',
-  '\t});',
+  "\t\tconst reminder = observe(exec);",
+  "\t\tconst downstream = await next();",
+  "\t\tif (!reminder) return downstream;",
+  "\t\treturn { ...downstream, additionalContexts: prependContext(reminder, downstream.additionalContexts) };",
+  "\t});",
 ].join("\n");
 
 function fixture() {
+  // 本组显式测试 desktop 补丁，不经过 Web 实例维护入口。
+  const previousSurface = process.env.DSH_SURFACE;
+  process.env.DSH_SURFACE = "desktop";
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "purge-optin-"));
   const app = path.join(root, "app");
   const host = path.join(app, "node_modules/@deepseek-ai");
@@ -36,8 +39,20 @@ function fixture() {
   fs.mkdirSync(dir, { recursive: true });
   fs.mkdirSync(home, { recursive: true });
   // 用真实锚点原文当测试夹具：补丁只认这一整段。
-  fs.writeFileSync(path.join(dir, "index.js"), `${ALL_PATCHES.find((p) => p.id === 18).replacements[0].pattern}\n`);
-  return { root, host, home, close: () => removeTreeNoFollowSync(root) };
+  fs.writeFileSync(
+    path.join(dir, "index.js"),
+    `${ALL_PATCHES.find((p) => p.id === 18).replacements[0].pattern}\n`,
+  );
+  return {
+    root,
+    host,
+    home,
+    close: () => {
+      if (previousSurface === undefined) delete process.env.DSH_SURFACE;
+      else process.env.DSH_SURFACE = previousSurface;
+      removeTreeNoFollowSync(root);
+    },
+  };
 }
 
 const patch18 = ALL_PATCHES.find((p) => p.id === 18);
@@ -56,13 +71,20 @@ test("disabled patches report disabled and are not written", async () => {
     const report = await applyPatches(f.host, [patch18], opts);
     assert.equal(report[0].status, "disabled");
     assert.equal(
-      fs.readFileSync(path.join(f.host, "dsh-repeat-tool-reminder/lib/index.js"), "utf8"),
+      fs.readFileSync(
+        path.join(f.host, "dsh-repeat-tool-reminder/lib/index.js"),
+        "utf8",
+      ),
       `${patch18.replacements[0].pattern}\n`,
     );
 
     const status = await patchStatus(f.host, [patch18], opts);
     assert.equal(status[18], "disabled");
-    assert.equal(patchStatusReady("disabled", patch18), true, "an intentional off switch is not a failure");
+    assert.equal(
+      patchStatusReady("disabled", patch18),
+      true,
+      "an intentional off switch is not a failure",
+    );
     assert.equal(tallyPatchStatus(status, [patch18]).disabled, 1);
     assert.equal(tallyPatchStatus(status, [patch18]).not_applicable, 1);
   } finally {
@@ -78,13 +100,21 @@ test("an opt-in patch left off is soft in the apply summary, not a failure", asy
     assert.equal(report[0].status, "disabled");
     const summary = summarizeApplyReport(report, [patch18]);
     // 面板红字只看 failed：默认关闭的 #18/#19 不能把整次应用标成「N 项处理失败」。
-    assert.deepEqual(summary.failed.map((r) => r.patch_id), []);
-    assert.deepEqual(summary.soft.map((r) => r.patch_id), [18]);
+    assert.deepEqual(
+      summary.failed.map((r) => r.patch_id),
+      [],
+    );
+    assert.deepEqual(
+      summary.soft.map((r) => r.patch_id),
+      [18],
+    );
 
     // 同口径检查：真失败不能被这一行顺手静音。
     for (const status of ["write_failed", "EACCES: permission denied"]) {
       assert.deepEqual(
-        summarizeApplyReport([{ patch_id: 18, status }], [patch18]).failed.map((r) => r.patch_id),
+        summarizeApplyReport([{ patch_id: 18, status }], [patch18]).failed.map(
+          (r) => r.patch_id,
+        ),
         [18],
         `${status} must stay a failure`,
       );
@@ -99,21 +129,46 @@ test("disabled selections do not hide mixed real errors or UI failure details", 
   try {
     const patches = ALL_PATCHES.filter((p) => [18, 19].includes(p.id));
     const report = await applyPatches(f.host, patches, {
-      dshHome: f.home, surface: "desktop", extraPatches: [],
+      dshHome: f.home,
+      surface: "desktop",
+      extraPatches: [],
     });
-    assert.deepEqual(report.map((r) => r.status), ["disabled", "disabled"]);
+    assert.deepEqual(
+      report.map((r) => r.status),
+      ["disabled", "disabled"],
+    );
     const source = path.join(f.host, "dsh-repeat-tool-reminder/lib/index.js");
-    assert.equal(fs.readFileSync(source, "utf8"), `${patch18.replacements[0].pattern}\n`);
+    assert.equal(
+      fs.readFileSync(source, "utf8"),
+      `${patch18.replacements[0].pattern}\n`,
+    );
     assert.equal(fs.existsSync(source + ".dshpurge.bak"), false);
     assert.equal(summarizeApplyReport(report, patches).failed.length, 0);
 
-    const errors = ["write_failed", "EACCES: permission denied", "pattern_not_found", "hit_mismatch:1!=2", "partial", "unreadable", "unexpected_status"];
+    const errors = [
+      "write_failed",
+      "EACCES: permission denied",
+      "pattern_not_found",
+      "hit_mismatch:1!=2",
+      "partial",
+      "unreadable",
+      "unexpected_status",
+    ];
     for (const status of errors) {
-      const summary = summarizeApplyReport([...report, {patch_id: 999, status}], [...patches, {id: 999, strictFiles: true}]);
-      assert.deepEqual(summary.failed, [{patch_id: 999, status}]);
+      const summary = summarizeApplyReport(
+        [...report, { patch_id: 999, status }],
+        [...patches, { id: 999, strictFiles: true }],
+      );
+      assert.deepEqual(summary.failed, [{ patch_id: 999, status }]);
       assert.equal(summary.soft.length, 2);
-      const text = incompleteApplyDetail({failed: summary.failed.length, failed_items: summary.failed.map((r) => ({id: r.patch_id}))},
-        (key, values = {}) => `${key}:${values.failed || ""}:${values.ids || ""}`);
+      const text = incompleteApplyDetail(
+        {
+          failed: summary.failed.length,
+          failed_items: summary.failed.map((r) => ({ id: r.patch_id })),
+        },
+        (key, values = {}) =>
+          `${key}:${values.failed || ""}:${values.ids || ""}`,
+      );
       assert.equal(text, "restart.incomplete.patches:1:999");
     }
   } finally {
@@ -127,7 +182,10 @@ test("enabling writes the patch and flips the status to applied", async () => {
     const opts = { dshHome: f.home, surface: "desktop", extraPatches: [18] };
     const report = await applyPatches(f.host, [patch18], opts);
     assert.equal(report[0].status, "applied");
-    const text = fs.readFileSync(path.join(f.host, "dsh-repeat-tool-reminder/lib/index.js"), "utf8");
+    const text = fs.readFileSync(
+      path.join(f.host, "dsh-repeat-tool-reminder/lib/index.js"),
+      "utf8",
+    );
     assert.ok(text.includes("[dsh-purge] repeat-tool-reminder disabled"));
     const status = await patchStatus(f.host, [patch18], opts);
     assert.equal(status[18], "applied");
@@ -153,14 +211,23 @@ test("#251 rc.3 requires the matching post-execute and pre-step registrations to
     const fp = path.join(f.host, "dsh-repeat-tool-reminder/lib/index.js");
     const source = patch18.replacements[1].pattern;
     assert.ok(!source.includes('downstream.kind === "block"'));
-    const partial = source.slice(0, source.indexOf('\tctx.on("agent/pre-step"'));
+    const partial = source.slice(
+      0,
+      source.indexOf('\tctx.on("agent/pre-step"'),
+    );
     fs.writeFileSync(fp, partial);
     await applyPatches(f.host, [patch18], opts);
     assert.equal(fs.readFileSync(fp, "utf8"), partial);
     assert.equal((await patchStatus(f.host, [patch18], opts))[18], "drifted");
     fs.writeFileSync(fp, source.replaceAll("\n", "\r\n"));
-    assert.equal((await applyPatches(f.host, [patch18], opts))[0].status, "applied");
-    assert.equal((await applyPatches(f.host, [patch18], opts))[0].status, "already");
+    assert.equal(
+      (await applyPatches(f.host, [patch18], opts))[0].status,
+      "applied",
+    );
+    assert.equal(
+      (await applyPatches(f.host, [patch18], opts))[0].status,
+      "already",
+    );
     assert.equal((await patchStatus(f.host, [patch18], opts))[18], "applied");
     fs.appendFileSync(fp, '\nctx.on("agent/pre-step", different);');
     assert.equal((await patchStatus(f.host, [patch18], opts))[18], "drifted");
@@ -172,24 +239,34 @@ test("#251 rc.3 requires the matching post-execute and pre-step registrations to
 test("#252 verify a markerless deletion against the original file on repeated apply", async () => {
   const f = fixture();
   try {
-    const patch = ALL_PATCHES.find(p => p.id === 54);
+    const patch = ALL_PATCHES.find((p) => p.id === 54);
     const opts = { dshHome: f.home, surface: "web" };
     const dir = path.join(f.host, "dsh-deliverable-file-references/lib");
     fs.mkdirSync(dir, { recursive: true });
     const fp = path.join(dir, "index.js");
     const bak = fp + ".dshpurge.bak";
     const status = async () => (await patchStatus(f.host, [patch], opts))[54];
-    const original = 'const prompt = "Head.' + patch.replacements[0].pattern + ' Tail.";\r\n';
+    const original =
+      'const prompt = "Head.' + patch.replacements[0].pattern + ' Tail.";\r\n';
     fs.writeFileSync(fp, original);
     fs.writeFileSync(bak, original);
     assert.equal(await status(), "pending");
-    assert.equal((await applyPatches(f.host, [patch], opts))[0].status, "applied");
+    assert.equal(
+      (await applyPatches(f.host, [patch], opts))[0].status,
+      "applied",
+    );
     assert.equal(await status(), "applied");
-    assert.equal((await applyPatches(f.host, [patch], opts))[0].status, "already");
+    assert.equal(
+      (await applyPatches(f.host, [patch], opts))[0].status,
+      "already",
+    );
     assert.equal(fs.readFileSync(bak, "utf8"), original);
     fs.appendFileSync(fp, "// other change\r\n");
     assert.equal(await status(), "drifted");
-    assert.equal((await applyPatches(f.host, [patch], opts))[0].status, "backup_content_mismatch");
+    assert.equal(
+      (await applyPatches(f.host, [patch], opts))[0].status,
+      "backup_content_mismatch",
+    );
     fs.writeFileSync(bak, "no original pattern");
     assert.equal(await status(), "skipped");
     fs.writeFileSync(bak, "");
